@@ -1,5 +1,7 @@
 package com.ashmakesstuff.transifi
 
+import android.app.Dialog
+import android.app.ProgressDialog
 import android.content.Context
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pConfig
@@ -13,6 +15,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.ListView
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.ListFragment
 
@@ -32,16 +36,28 @@ private const val ARG_PARAM2 = "param2"
  *
  */
 class DeviceListFragment : ListFragment(), PeerListListener {
-    override fun onPeersAvailable(peers: WifiP2pDeviceList?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
 
     // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+//    private var param1: String? = null
+//    private var param2: String? = null
     private var listener: OnFragmentInteractionListener? = null
     private var peers = ArrayList<WifiP2pDevice>()
     private lateinit var device: WifiP2pDevice
+    private lateinit var progressDialog: ProgressDialog
+
+    override fun onPeersAvailable(peerList: WifiP2pDeviceList?) {
+        if(progressDialog != null && progressDialog.isShowing){
+            progressDialog.dismiss()
+        }
+
+        peers.clear()
+        peers.addAll(peerList!!.deviceList)
+        (listAdapter as WiFiPeerListAdapter).notifyDataSetChanged()
+        if (peers.size == 0) {
+            Log.d(MainActivity.TAG, "No devices found")
+            return
+        }
+    }
 
     /**
      * Array adapter for ListFragment that maintains WifiP2pDevice list.
@@ -60,10 +76,10 @@ class DeviceListFragment : ListFragment(), PeerListListener {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View? {
             var v = convertView
             if (v == null) {
-                val vi = activity.getSystemService(
+                val vi = activity!!.getSystemService(
                     Context.LAYOUT_INFLATER_SERVICE
                 ) as LayoutInflater
-                v = vi.inflate(R.layout.row_devices, null)
+                v = vi.inflate(R.layout.device_row, null)
             }
             val device = items[position]
             if (device != null) {
@@ -82,11 +98,11 @@ class DeviceListFragment : ListFragment(), PeerListListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-        this.listAdapter = WiFiPeerListAdapter(context!!, R.layout.row_devices, peers)
+//        arguments?.let {
+//            param1 = it.getString(ARG_PARAM1)
+//            param2 = it.getString(ARG_PARAM2)
+//        }
+        this.listAdapter = WiFiPeerListAdapter(context!!, R.layout.device_row, peers)
     }
 
     override fun onCreateView(
@@ -116,24 +132,12 @@ class DeviceListFragment : ListFragment(), PeerListListener {
         }
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    fun onButtonPressed(uri: Uri) {
-        listener?.onFragmentInteraction(uri)
+    override fun onListItemClick(l: ListView?, v: View?, position: Int, id: Long) {
+        val device = listAdapter.getItem(position) as WifiP2pDevice
+        (activity as OnFragmentInteractionListener).showDetails(device)
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnFragmentInteractionListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnFragmentInteractionListener")
-        }
-    }
 
-    override fun onDetach() {
-        super.onDetach()
-        listener = null
-    }
 
     /**
      * This interface must be implemented by activities that contain this
